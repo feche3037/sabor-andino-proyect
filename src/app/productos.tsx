@@ -1,3 +1,4 @@
+
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
@@ -428,7 +429,7 @@ export default function ProductosScreen() {
             <Text style={styles.deleteWarningText}>
               ¿Estás seguro de que deseás eliminar el producto{" "}
               <Text style={{ fontWeight: "bold", color: "#1F1F1F" }}>
-                "{productoAEliminar?.nombre}"
+                {productoAEliminar?.nombre}
               </Text>
               ? Esta acción no se puede deshacer.
             </Text>

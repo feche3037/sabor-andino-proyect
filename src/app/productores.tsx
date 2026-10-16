@@ -18,17 +18,15 @@ import { BottomNav } from "@/components/bottom-nav";
 import { SelectModal, SelectOption } from "@/components/select-modal";
 import { LOCALIDADES_SALTA } from "@/constants/localidades-salta";
 import {
-  actualizarProducto,
-  crearProducto,
-  suscribirProductos,
-} from "@/services/productos.service";
-import {
   actualizarProductor,
   crearProductor,
   eliminarProductor,
   suscribirProductores,
 } from "@/services/productores.service";
-import { Productor, Producto } from "@/types";
+import {
+  suscribirProductos,
+} from "@/services/productos.service";
+import { Producto, Productor } from "@/types";
 
 export default function ProductoresScreen() {
   const [productores, setProductores] = useState<Productor[]>([]);
@@ -713,7 +711,7 @@ export default function ProductoresScreen() {
             <Text style={styles.deleteWarningText}>
               ¿Estás seguro de que deseás eliminar a{" "}
               <Text style={{ fontWeight: "bold", color: "#1F1F1F" }}>
-                "{productorAEliminar?.nombre}"
+                {productorAEliminar?.nombre}
               </Text>
               ? Esta acción quitará al productor de la base de datos de manera
               permanente.
