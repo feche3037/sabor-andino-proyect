@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BottomNav } from "@/components/bottom-nav";
+
 export default function PerfilScreen() {
   const router = useRouter();
 
@@ -136,31 +138,7 @@ export default function PerfilScreen() {
       </ScrollView>
 
       {/* Barra de Navegación Inferior */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          activeOpacity={0.7}
-          onPress={() => router.replace("/home")}
-        >
-          <Ionicons name="home-outline" size={22} color="#666666" />
-          <Text style={styles.navLabel}>Inicio</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          activeOpacity={0.7}
-          onPress={() => router.replace("/productores")}
-        >
-          <Ionicons name="people-outline" size={22} color="#666666" />
-          <Text style={styles.navLabel}>Productores</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-          <View style={styles.activeIndicator} />
-          <Ionicons name="person" size={22} color="#7A2214" />
-          <Text style={[styles.navLabel, styles.activeNavLabel]}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav currentTab="perfil" />
     </SafeAreaView>
   );
 }
@@ -269,39 +247,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
-  },
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    position: "relative",
-  },
-  activeIndicator: {
-    position: "absolute",
-    top: -8,
-    width: 32,
-    height: 4,
-    backgroundColor: "#E8A338",
-    borderRadius: 2,
-  },
-  navLabel: {
-    fontSize: 12,
-    color: "#666666",
-    marginTop: 4,
-  },
-  activeNavLabel: {
-    color: "#7A2214",
     fontWeight: "bold",
   },
 });

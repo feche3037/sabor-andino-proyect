@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BottomNav } from "@/components/bottom-nav";
+
 interface Productor {
   id: string;
   nombre: string;
@@ -427,33 +429,7 @@ export default function ProductoresScreen() {
       </Modal>
 
       {/* Barra de Navegación Inferior */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          activeOpacity={0.7}
-          onPress={() => router.replace("/home")}
-        >
-          <Ionicons name="home-outline" size={22} color="#666666" />
-          <Text style={styles.navLabel}>Inicio</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-          <View style={styles.activeIndicator} />
-          <Ionicons name="people" size={22} color="#7A2214" />
-          <Text style={[styles.navLabel, styles.activeNavLabel]}>
-            Productores
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          activeOpacity={0.7}
-          onPress={() => router.replace("/perfil")}
-        >
-          <Ionicons name="person-outline" size={22} color="#666666" />
-          <Text style={styles.navLabel}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav currentTab="productores" />
     </SafeAreaView>
   );
 }
@@ -616,39 +592,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1F1F1F",
     marginLeft: 4,
-  },
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    position: "relative",
-  },
-  activeIndicator: {
-    position: "absolute",
-    top: -8,
-    width: 32,
-    height: 4,
-    backgroundColor: "#E8A338",
-    borderRadius: 2,
-  },
-  navLabel: {
-    fontSize: 12,
-    color: "#666666",
-    marginTop: 4,
-  },
-  activeNavLabel: {
-    color: "#7A2214",
-    fontWeight: "bold",
   },
   modalOverlay: {
     flex: 1,

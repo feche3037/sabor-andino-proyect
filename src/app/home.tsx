@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BottomNav } from "@/components/bottom-nav";
+
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -69,29 +71,8 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Barra de Navegación Inferior (Tab Bar) */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-          <View style={styles.activeIndicator} />
-          <Ionicons name="home" size={22} color="#7A2214" />
-          <Text style={[styles.navLabel, styles.activeNavLabel]}>Inicio</Text>
-        </TouchableOpacity>
-
-        {/* Ir a Productores desde la barra inferior */}
-        <TouchableOpacity
-          onPress={() => router.push("/perfil")}
-          activeOpacity={0.7}
-          onPress={() => router.push("/productores")}
-        >
-          <Ionicons name="people-outline" size={22} color="#666666" />
-          <Text style={styles.navLabel}>Productores</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-          <Ionicons name="person-outline" size={22} color="#666666" />
-          <Text style={styles.navLabel}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Barra de Navegación Inferior */}
+      <BottomNav currentTab="home" />
     </SafeAreaView>
   );
 }
@@ -183,39 +164,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "bold",
-  },
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    position: "relative",
-  },
-  activeIndicator: {
-    position: "absolute",
-    top: -8,
-    width: 32,
-    height: 4,
-    backgroundColor: "#E8A338",
-    borderRadius: 2,
-  },
-  navLabel: {
-    fontSize: 12,
-    color: "#666666",
-    marginTop: 4,
-  },
-  activeNavLabel: {
-    color: "#7A2214",
     fontWeight: "bold",
   },
 });
