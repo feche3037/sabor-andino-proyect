@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StatusBar,
@@ -13,16 +14,42 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAuth } from "@/context/auth-context";
+
 export default function LoginScreen() {
   const router = useRouter();
+  const { login } = useAuth();
 
   // Estados del formulario
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Mapeo amigable de errores de Firebase Auth
+  const getErrorMessage = (error: unknown): string => {
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const code = (error as { code: string }).code;
+      switch (code) {
+        case "auth/invalid-credential":
+        case "auth/user-not-found":
+        case "auth/wrong-password":
+          return "El correo o la contraseña son incorrectos.";
+        case "auth/invalid-email":
+          return "El formato de correo no es válido.";
+        case "auth/too-many-requests":
+          return "Demasiados intentos fallidos. Intenta más tarde.";
+        case "auth/network-request-failed":
+          return "Error de red. Verifica tu conexión a internet.";
+        default:
+          return "Ocurrió un error al iniciar sesión. Intenta nuevamente.";
+      }
+    }
+    return "Error inesperado. Intenta nuevamente.";
+  };
 
   // Función para procesar e iniciar sesión
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password) {
       Alert.alert(
         "Campos incompletos",
@@ -31,8 +58,15 @@ export default function LoginScreen() {
       return;
     }
 
-    // Redirección directa a la pantalla principal (Home)
-    router.replace("/home");
+    try {
+      setLoading(true);
+      await login(email, password);
+      // La navegación hacia /home es manejada por el NavigationGate / AuthContext
+    } catch (error) {
+      Alert.alert("Error de autenticación", getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +86,7 @@ export default function LoginScreen() {
       </View>
 
       {/* Formulario de Login */}
-      <ScrollView contentContainerStyle={styles.formContainer}>
+      <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
         {/* Campo Correo electrónico */}
         <Text style={styles.label}>Correo electrónico</Text>
         <TextInput
@@ -63,6 +97,7 @@ export default function LoginScreen() {
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
+          editable={!loading}
         />
 
         {/* Campo Contraseña */}
@@ -75,23 +110,39 @@ export default function LoginScreen() {
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
+            editable={!loading}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            disabled={loading}
+          >
             <Text style={styles.showText}>
               {showPassword ? "Ocultar" : "Mostrar"}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Botón Iniciar Sesión con evento onPress vinculado */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleLogin}>
-          <Text style={styles.submitButtonText}>Iniciar sesión</Text>
+        {/* Botón Iniciar Sesión */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitButtonText}>Iniciar sesión</Text>
+          )}
         </TouchableOpacity>
 
         {/* Enlace para ir a Crear Cuenta */}
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>¿No tenés una cuenta?</Text>
-          <TouchableOpacity onPress={() => router.push("/signup")}>
+          <TouchableOpacity
+            onPress={() => router.push("/signup")}
+            disabled={loading}
+          >
             <Text style={styles.registerLink}> Registrarse</Text>
           </TouchableOpacity>
         </View>
@@ -181,6 +232,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
     marginBottom: 20,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
   submitButtonText: {
     color: "#FFFFFF",

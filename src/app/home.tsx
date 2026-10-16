@@ -11,9 +11,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BottomNav } from "@/components/bottom-nav";
+import { useAuth } from "@/context/auth-context";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { userProfile, user } = useAuth();
+
+  const nombreUsuario =
+    userProfile?.nombre || user?.displayName?.split(" ")[0] || "";
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -31,6 +36,14 @@ export default function HomeScreen() {
 
           <Text style={styles.title}>Sabor Andino</Text>
           <Text style={styles.subtitle}>Especias del Norte</Text>
+
+          {nombreUsuario ? (
+            <View style={styles.userGreetingBadge}>
+              <Text style={styles.userGreetingText}>
+                ¡Hola, {nombreUsuario}!
+              </Text>
+            </View>
+          ) : null}
 
           {/* Borde inferior decorativo dentado/andino */}
           <View style={styles.teethContainer}>
@@ -54,20 +67,40 @@ export default function HomeScreen() {
             Desde 2009, junto a los productores de los Valles Calchaquíes.
           </Text>
 
-          {/* Botón Ver Productores (Abre /productores) */}
-          <TouchableOpacity
-            style={styles.actionButton}
-            activeOpacity={0.8}
-            onPress={() => router.push("/productores")}
-          >
-            <Ionicons
-              name="people-outline"
-              size={20}
-              color="#FFFFFF"
-              style={styles.buttonIcon}
-            />
-            <Text style={styles.actionButtonText}>Ver productores</Text>
-          </TouchableOpacity>
+          {/* Botones de acción rápida */}
+          <View style={styles.buttonsContainer}>
+            {/* Botón Ver Productores */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              activeOpacity={0.8}
+              onPress={() => router.push("/productores")}
+            >
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color="#FFFFFF"
+                style={styles.buttonIcon}
+              />
+              <Text style={styles.actionButtonText}>Ver productores</Text>
+            </TouchableOpacity>
+
+            {/* Botón Ver Productos */}
+            <TouchableOpacity
+              style={[styles.actionButton, styles.secondaryButton]}
+              activeOpacity={0.8}
+              onPress={() => router.push("/productos")}
+            >
+              <Ionicons
+                name="pricetag-outline"
+                size={20}
+                color="#7A2214"
+                style={styles.buttonIcon}
+              />
+              <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>
+                Ver productos
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -115,6 +148,18 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginTop: 2,
   },
+  userGreetingBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+  userGreetingText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   teethContainer: {
     position: "absolute",
     bottom: -6,
@@ -149,6 +194,9 @@ const styles = StyleSheet.create({
     color: "#777777",
     marginBottom: 24,
   },
+  buttonsContainer: {
+    gap: 12,
+  },
   actionButton: {
     backgroundColor: "#8B2613",
     flexDirection: "row",
@@ -158,6 +206,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
   },
+  secondaryButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#7A2214",
+  },
   buttonIcon: {
     marginRight: 8,
   },
@@ -165,5 +218,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  secondaryButtonText: {
+    color: "#7A2214",
   },
 });

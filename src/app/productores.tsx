@@ -1,200 +1,267 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BottomNav } from "@/components/bottom-nav";
-
-interface Productor {
-  id: string;
-  nombre: string;
-  localidad: string;
-  producto: string;
-  iniciales: string;
-}
-
-const PRODUCTORES_INICIALES: Productor[] = [
-  {
-    id: "1",
-    nombre: "Marta Guanuco",
-    localidad: "Cachi",
-    producto: "Pimentón",
-    iniciales: "MG",
-  },
-  {
-    id: "2",
-    nombre: "Ramón Colque",
-    localidad: "Payogasta",
-    producto: "Pimentón",
-    iniciales: "RC",
-  },
-  {
-    id: "3",
-    nombre: "Elvira Choque",
-    localidad: "Seclantás",
-    producto: "Ají",
-    iniciales: "EC",
-  },
-  {
-    id: "4",
-    nombre: "Julio Tolaba",
-    localidad: "San Carlos",
-    producto: "Pimentón y ají",
-    iniciales: "JT",
-  },
-  {
-    id: "5",
-    nombre: "Aurelio Flores",
-    localidad: "Molinos",
-    producto: "Pimentón",
-    iniciales: "AF",
-  },
-  {
-    id: "6",
-    nombre: "Carmen Guaimás",
-    localidad: "Angastaco",
-    producto: "Comino",
-    iniciales: "CG",
-  },
-  {
-    id: "7",
-    nombre: "Lucio Condorí",
-    localidad: "Cachi",
-    producto: "Anís y ají",
-    iniciales: "LC",
-  },
-  {
-    id: "8",
-    nombre: "Severina Mamaní",
-    localidad: "Cafayate",
-    producto: "Pimentón",
-    iniciales: "SM",
-  },
-];
+import { SelectModal, SelectOption } from "@/components/select-modal";
+import { LOCALIDADES_SALTA } from "@/constants/localidades-salta";
+import {
+  actualizarProducto,
+  crearProducto,
+  suscribirProductos,
+} from "@/services/productos.service";
+import {
+  actualizarProductor,
+  crearProductor,
+  eliminarProductor,
+  suscribirProductores,
+} from "@/services/productores.service";
+import { Productor, Producto } from "@/types";
 
 export default function ProductoresScreen() {
-  const router = useRouter();
-  const [productores, setProductores] = useState<Productor[]>(
-    PRODUCTORES_INICIALES,
-  );
+  const [productores, setProductores] = useState<Productor[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
 
-  // Estado para el modal de agregar nuevo productor
+  // Select Modals auxiliares
+  const [selectLocalidadVisible, setSelectLocalidadVisible] = useState(false);
+  const [selectProductoVisible, setSelectProductoVisible] = useState(false);
+  const [targetModal, setTargetModal] = useState<"agregar" | "editar">("agregar");
+
+  // Modal Agregar
   const [modalAgregarVisible, setModalAgregarVisible] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevaLocalidad, setNuevaLocalidad] = useState("");
-  const [nuevoProducto, setNuevoProducto] = useState("");
+  const [nuevoProducto, setNuevoProducto] = useState<Producto | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
-  // Estado para el modal de ver detalle de productor
+  // Modal Editar
+  const [modalEditarVisible, setModalEditarVisible] = useState(false);
+  const [productorAEditar, setProductorAEditar] = useState<Productor | null>(null);
+  const [editNombre, setEditNombre] = useState("");
+  const [editLocalidad, setEditLocalidad] = useState("");
+  const [editProducto, setEditProducto] = useState<Producto | null>(null);
+
+  // Modal Ver Detalle
   const [modalVerVisible, setModalVerVisible] = useState(false);
   const [productorSeleccionado, setProductorSeleccionado] =
     useState<Productor | null>(null);
 
-  // Filtrado en tiempo real
+  // Modal Eliminar
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [productorAEliminar, setProductorAEliminar] = useState<Productor | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  // Suscribirse a Productores y Productos en Firestore
+  useEffect(() => {
+    const unsubProductores = suscribirProductores(
+      (data) => {
+        setProductores(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error al cargar productores:", error);
+        setLoading(false);
+      },
+    );
+
+    const unsubProductos = suscribirProductos(
+      (data) => {
+        setProductos(data);
+      },
+      (error) => {
+        console.error("Error al cargar productos:", error);
+      },
+    );
+
+    return () => {
+      unsubProductores();
+      unsubProductos();
+    };
+  }, []);
+
+  // Opciones para SelectModal
+  const opcionesLocalidades: SelectOption[] = LOCALIDADES_SALTA.map((loc) => ({
+    id: loc,
+    label: loc,
+    subtitle: "Salta, Argentina",
+  }));
+
+  const opcionesProductos: SelectOption[] = productos.map((prod) => ({
+    id: prod.id,
+    label: prod.nombre,
+    color: prod.color,
+  }));
+
+  // Filtrado de productores
   const productoresFiltrados = productores.filter(
     (p) =>
       p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.localidad.toLowerCase().includes(busqueda.toLowerCase()),
+      p.localidad.toLowerCase().includes(busqueda.toLowerCase()) ||
+      p.producto?.nombre?.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
-  // Función para abrir el modal de ver detalle
-  const handleVerProductor = (productor: Productor) => {
-    setProductorSeleccionado(productor);
-    setModalVerVisible(true);
+  // Abrir Select Localidad
+  const handleAbrirSelectLocalidad = (mode: "agregar" | "editar") => {
+    setTargetModal(mode);
+    setSelectLocalidadVisible(true);
   };
 
-  // Función para eliminar/desactivar productor con alerta de confirmación
-  const handleEliminarProductor = (productor: Productor) => {
-    Alert.alert(
-      "Eliminar productor",
-      `¿Estás seguro de que deseas eliminar a ${productor.nombre}?`,
-      [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => {
-            setProductores((prev) => prev.filter((p) => p.id !== productor.id));
-          },
-        },
-      ],
-    );
+  // Abrir Select Producto
+  const handleAbrirSelectProducto = (mode: "agregar" | "editar") => {
+    if (productos.length === 0) {
+      Alert.alert(
+        "Sin productos",
+        "Aún no diste de alta ningún producto. Andá a la pestaña 'Productos' para crear uno primero.",
+      );
+      return;
+    }
+    setTargetModal(mode);
+    setSelectProductoVisible(true);
   };
 
-  // Función para agregar un nuevo productor
-  const handleAgregarProductor = () => {
-    if (
-      !nuevoNombre.trim() ||
-      !nuevaLocalidad.trim() ||
-      !nuevoProducto.trim()
-    ) {
+  // Selección de Localidad
+  const handleSeleccionarLocalidad = (option: SelectOption) => {
+    if (targetModal === "agregar") {
+      setNuevaLocalidad(option.label);
+    } else {
+      setEditLocalidad(option.label);
+    }
+  };
+
+  // Selección de Producto
+  const handleSeleccionarProducto = (option: SelectOption) => {
+    const productoEncontrado = productos.find((p) => p.id === option.id) || null;
+    if (targetModal === "agregar") {
+      setNuevoProducto(productoEncontrado);
+    } else {
+      setEditProducto(productoEncontrado);
+    }
+  };
+
+  // Crear Productor
+  const handleAgregarProductor = async () => {
+    if (!nuevoNombre.trim() || !nuevaLocalidad.trim() || !nuevoProducto) {
       Alert.alert(
         "Campos incompletos",
-        "Por favor completa todos los datos del productor.",
+        "Por favor completa el nombre, localidad y selecciona un producto.",
       );
       return;
     }
 
-    // Generar iniciales automáticamente
-    const partesNombre = nuevoNombre.trim().split(" ");
-    const iniciales =
-      partesNombre.length >= 2
-        ? `${partesNombre[0][0]}${partesNombre[1][0]}`.toUpperCase()
-        : nuevoNombre.trim().substring(0, 2).toUpperCase();
+    try {
+      setGuardando(true);
+      await crearProductor({
+        nombre: nuevoNombre.trim(),
+        localidad: nuevaLocalidad.trim(),
+        producto: nuevoProducto,
+      });
 
-    const nuevo: Productor = {
-      id: Date.now().toString(),
-      nombre: nuevoNombre.trim(),
-      localidad: nuevaLocalidad.trim(),
-      producto: nuevoProducto.trim(),
-      iniciales,
-    };
-
-    setProductores([nuevo, ...productores]);
-    setNuevoNombre("");
-    setNuevaLocalidad("");
-    setNuevoProducto("");
-    setModalAgregarVisible(false);
-    Alert.alert("Éxito", "Productor guardado correctamente.");
+      setNuevoNombre("");
+      setNuevaLocalidad("");
+      setNuevoProducto(null);
+      setModalAgregarVisible(false);
+      Alert.alert("Éxito", "Productor guardado correctamente.");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo guardar el productor.");
+      console.error(error);
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  // Función para obtener color de etiqueta según el producto
-  const getBadgeStyle = (producto: string) => {
-    const text = producto.toLowerCase();
-    if (text.includes("pimentón") && text.includes("ají")) {
-      return { bg: "#E2EFE0", color: "#2E6930" };
-    } else if (text.includes("ají")) {
-      return { bg: "#FCF3D7", color: "#8A6405" };
+  // Abrir Modal Editar
+  const handleAbrirEditar = (productor: Productor) => {
+    setProductorAEditar(productor);
+    setEditNombre(productor.nombre);
+    setEditLocalidad(productor.localidad);
+    setEditProducto(productor.producto);
+    setModalEditarVisible(true);
+  };
+
+  // Guardar Edición
+  const handleGuardarEditar = async () => {
+    if (!productorAEditar) return;
+    if (!editNombre.trim() || !editLocalidad.trim() || !editProducto) {
+      Alert.alert(
+        "Campos incompletos",
+        "Por favor completa el nombre, localidad y producto.",
+      );
+      return;
     }
-    return { bg: "#F8EAE7", color: "#7A2214" };
+
+    try {
+      setGuardando(true);
+      await actualizarProductor(productorAEditar.id, {
+        nombre: editNombre.trim(),
+        localidad: editLocalidad.trim(),
+        producto: editProducto,
+      });
+
+      setModalEditarVisible(false);
+      setProductorAEditar(null);
+      Alert.alert("Éxito", "Productor actualizado correctamente.");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo actualizar el productor.");
+      console.error(error);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Abrir Modal Eliminar
+  const handleAbrirEliminar = (productor: Productor) => {
+    setProductorAEliminar(productor);
+    setModalEliminarVisible(true);
+  };
+
+  // Confirmar Eliminación
+  const handleConfirmarEliminar = async () => {
+    if (!productorAEliminar) return;
+    try {
+      setEliminando(true);
+      await eliminarProductor(productorAEliminar.id);
+      setModalEliminarVisible(false);
+      setProductorAEliminar(null);
+      Alert.alert("Éxito", "Productor eliminado correctamente.");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo eliminar el productor.");
+      console.error(error);
+    } finally {
+      setEliminando(false);
+    }
+  };
+
+  // Abrir Modal Ver
+  const handleVerProductor = (productor: Productor) => {
+    setProductorSeleccionado(productor);
+    setModalVerVisible(true);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <StatusBar barStyle="light-content" backgroundColor="#7A2214" />
 
-      {/* Encabezado Rojo Terracota */}
+      {/* Encabezado Rojo Terracota con guarda andina */}
       <View style={styles.header}>
         <Text style={styles.title}>Productores</Text>
         <Text style={styles.subtitle}>
           Mostrando {productoresFiltrados.length} de {productores.length}
         </Text>
 
-        {/* Borde inferior dentado andino */}
         <View style={styles.teethContainer}>
           {Array.from({ length: 16 }).map((_, index) => (
             <View key={index} style={styles.tooth} />
@@ -213,7 +280,7 @@ export default function ProductoresScreen() {
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar productor o localidad"
+            placeholder="Buscar productor, localidad o producto"
             placeholderTextColor="#999999"
             value={busqueda}
             onChangeText={setBusqueda}
@@ -227,85 +294,129 @@ export default function ProductoresScreen() {
       </View>
 
       {/* Lista de Productores */}
-      <ScrollView contentContainerStyle={styles.listContent}>
-        <View style={styles.cardContainer}>
-          {productoresFiltrados.map((item, index) => {
-            const badge = getBadgeStyle(item.producto);
-            return (
-              <View
-                key={item.id}
-                style={[
-                  styles.itemRow,
-                  index < productoresFiltrados.length - 1 && styles.itemBorder,
-                ]}
-              >
-                {/* Avatar con Iniciales */}
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{item.iniciales}</Text>
-                </View>
+      {loading ? (
+        <View style={styles.loadingArea}>
+          <ActivityIndicator size="large" color="#7A2214" />
+          <Text style={styles.loadingText}>Cargando productores...</Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.listContent}>
+          {productoresFiltrados.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={48} color="#C4B8AB" />
+              <Text style={styles.emptyTitle}>
+                {busqueda
+                  ? "No hay coincidencias"
+                  : "No hay productores registrados"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {busqueda
+                  ? "Probá con otro término de búsqueda."
+                  : "Registrá tu primer productor con el botón de abajo."}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.cardContainer}>
+              {productoresFiltrados.map((item, index) => {
+                const prodColor = item.producto?.color || "#8B2613";
+                const prodNombre = item.producto?.nombre || "Sin producto";
 
-                {/* Información del Productor */}
-                <View style={styles.infoContainer}>
-                  <View style={styles.topRow}>
-                    <Text style={styles.nombreText}>{item.nombre}</Text>
-                    <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                      <Text style={[styles.badgeText, { color: badge.color }]}>
-                        {item.producto}
-                      </Text>
+                return (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.itemRow,
+                      index < productoresFiltrados.length - 1 && styles.itemBorder,
+                    ]}
+                  >
+                    {/* Avatar con Iniciales */}
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{item.iniciales}</Text>
+                    </View>
+
+                    {/* Información del Productor */}
+                    <View style={styles.infoContainer}>
+                      <View style={styles.topRow}>
+                        <Text style={styles.nombreText}>{item.nombre}</Text>
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: `${prodColor}18` },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.badgeText,
+                              { color: prodColor },
+                            ]}
+                          >
+                            {prodNombre}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.locationRow}>
+                        <Ionicons
+                          name="location-outline"
+                          size={14}
+                          color="#777777"
+                        />
+                        <Text style={styles.localidadText}>{item.localidad}</Text>
+                      </View>
+
+                      {/* Acciones */}
+                      <View style={styles.actionsRow}>
+                        {/* Botón Ver */}
+                        <TouchableOpacity
+                          style={styles.actionBtn}
+                          onPress={() => handleVerProductor(item)}
+                        >
+                          <Ionicons
+                            name="eye-outline"
+                            size={15}
+                            color="#7A2214"
+                          />
+                          <Text style={styles.actionText}>Ver</Text>
+                        </TouchableOpacity>
+
+                        {/* Botón Editar */}
+                        <TouchableOpacity
+                          style={styles.actionBtn}
+                          onPress={() => handleAbrirEditar(item)}
+                        >
+                          <Ionicons
+                            name="pencil-outline"
+                            size={15}
+                            color="#7A2214"
+                          />
+                          <Text style={styles.actionText}>Editar</Text>
+                        </TouchableOpacity>
+
+                        {/* Botón Eliminar */}
+                        <TouchableOpacity
+                          style={styles.actionBtn}
+                          onPress={() => handleAbrirEliminar(item)}
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={15}
+                            color="#C0392B"
+                          />
+                          <Text
+                            style={[styles.actionText, { color: "#C0392B" }]}
+                          >
+                            Eliminar
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-
-                  <View style={styles.locationRow}>
-                    <Ionicons
-                      name="location-outline"
-                      size={14}
-                      color="#777777"
-                    />
-                    <Text style={styles.localidadText}>{item.localidad}</Text>
-                  </View>
-
-                  {/* Acciones */}
-                  <View style={styles.actionsRow}>
-                    {/* Botón Ver */}
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handleVerProductor(item)}
-                    >
-                      <Ionicons name="eye-outline" size={15} color="#7A2214" />
-                      <Text style={styles.actionText}>Ver</Text>
-                    </TouchableOpacity>
-
-                    {/* Botón Editar */}
-                    <TouchableOpacity style={styles.actionBtn}>
-                      <Ionicons
-                        name="pencil-outline"
-                        size={15}
-                        color="#7A2214"
-                      />
-                      <Text style={styles.actionText}>Editar</Text>
-                    </TouchableOpacity>
-
-                    {/* Botón Eliminar / Desactivar */}
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handleEliminarProductor(item)}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={15}
-                        color="#C0392B"
-                      />
-                      <Text style={[styles.actionText, { color: "#C0392B" }]}>
-                        Eliminar
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       {/* Botón Flotante "+ Nuevo productor" */}
       <TouchableOpacity
@@ -344,16 +455,39 @@ export default function ProductoresScreen() {
                   <Ionicons name="location" size={18} color="#7A2214" />
                   <Text style={styles.detalleLabel}>Localidad:</Text>
                   <Text style={styles.detalleValue}>
-                    {productorSeleccionado.localidad}
+                    {productorSeleccionado.localidad} (Salta)
                   </Text>
                 </View>
 
                 <View style={styles.detalleRow}>
-                  <Ionicons name="leaf" size={18} color="#2E6930" />
+                  <Ionicons
+                    name="pricetag"
+                    size={18}
+                    color={productorSeleccionado.producto?.color || "#7A2214"}
+                  />
                   <Text style={styles.detalleLabel}>Producto:</Text>
-                  <Text style={styles.detalleValue}>
-                    {productorSeleccionado.producto}
-                  </Text>
+                  <View
+                    style={[
+                      styles.badge,
+                      {
+                        backgroundColor: `${
+                          productorSeleccionado.producto?.color || "#8B2613"
+                        }18`,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        {
+                          color:
+                            productorSeleccionado.producto?.color || "#8B2613",
+                        },
+                      ]}
+                    >
+                      {productorSeleccionado.producto?.nombre}
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -378,7 +512,10 @@ export default function ProductoresScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Agregar Productor</Text>
-              <TouchableOpacity onPress={() => setModalAgregarVisible(false)}>
+              <TouchableOpacity
+                onPress={() => setModalAgregarVisible(false)}
+                disabled={guardando}
+              >
                 <Ionicons name="close" size={24} color="#333333" />
               </TouchableOpacity>
             </View>
@@ -387,46 +524,249 @@ export default function ProductoresScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Ej: Marta Guanuco"
+              placeholderTextColor="#999999"
               value={nuevoNombre}
               onChangeText={setNuevoNombre}
+              editable={!guardando}
             />
 
-            <Text style={styles.inputLabel}>Localidad</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Ej: Cachi"
-              value={nuevaLocalidad}
-              onChangeText={setNuevaLocalidad}
-            />
+            <Text style={styles.inputLabel}>Localidad (Salta, Arg)</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => handleAbrirSelectLocalidad("agregar")}
+              disabled={guardando}
+            >
+              <Text
+                style={[
+                  styles.selectButtonText,
+                  !nuevaLocalidad && styles.selectPlaceholder,
+                ]}
+              >
+                {nuevaLocalidad || "Seleccionar localidad de Salta..."}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color="#777777" />
+            </TouchableOpacity>
 
-            <Text style={styles.inputLabel}>
-              Producto (Pimentón, Ají, etc.)
-            </Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Ej: Pimentón"
-              value={nuevoProducto}
-              onChangeText={setNuevoProducto}
-            />
+            <Text style={styles.inputLabel}>Producto</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => handleAbrirSelectProducto("agregar")}
+              disabled={guardando}
+            >
+              {nuevoProducto ? (
+                <View style={styles.selectedProductRow}>
+                  <View
+                    style={[
+                      styles.colorDot,
+                      { backgroundColor: nuevoProducto.color },
+                    ]}
+                  />
+                  <Text style={styles.selectButtonText}>
+                    {nuevoProducto.nombre}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.selectButtonText, styles.selectPlaceholder]}>
+                  Seleccionar producto existente...
+                </Text>
+              )}
+              <Ionicons name="chevron-down" size={18} color="#777777" />
+            </TouchableOpacity>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setModalAgregarVisible(false)}
+                disabled={guardando}
               >
                 <Text style={styles.cancelBtnText}>Cancelar</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.saveBtn}
+                style={[styles.saveBtn, guardando && styles.buttonDisabled]}
                 onPress={handleAgregarProductor}
+                disabled={guardando}
               >
-                <Text style={styles.saveBtnText}>Guardar</Text>
+                {guardando ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Guardar</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Modal para Editar Productor */}
+      <Modal
+        visible={modalEditarVisible}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar Productor</Text>
+              <TouchableOpacity
+                onPress={() => setModalEditarVisible(false)}
+                disabled={guardando}
+              >
+                <Ionicons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Nombre completo</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Ej: Marta Guanuco"
+              placeholderTextColor="#999999"
+              value={editNombre}
+              onChangeText={setEditNombre}
+              editable={!guardando}
+            />
+
+            <Text style={styles.inputLabel}>Localidad (Salta, Arg)</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => handleAbrirSelectLocalidad("editar")}
+              disabled={guardando}
+            >
+              <Text style={styles.selectButtonText}>
+                {editLocalidad || "Seleccionar localidad..."}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color="#777777" />
+            </TouchableOpacity>
+
+            <Text style={styles.inputLabel}>Producto</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => handleAbrirSelectProducto("editar")}
+              disabled={guardando}
+            >
+              {editProducto ? (
+                <View style={styles.selectedProductRow}>
+                  <View
+                    style={[
+                      styles.colorDot,
+                      { backgroundColor: editProducto.color },
+                    ]}
+                  />
+                  <Text style={styles.selectButtonText}>
+                    {editProducto.nombre}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.selectButtonText, styles.selectPlaceholder]}>
+                  Seleccionar producto...
+                </Text>
+              )}
+              <Ionicons name="chevron-down" size={18} color="#777777" />
+            </TouchableOpacity>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setModalEditarVisible(false)}
+                disabled={guardando}
+              >
+                <Text style={styles.cancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, guardando && styles.buttonDisabled]}
+                onPress={handleGuardarEditar}
+                disabled={guardando}
+              >
+                {guardando ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Actualizar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Eliminar Productor */}
+      <Modal
+        visible={modalEliminarVisible}
+        animationType="fade"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.dangerIconContainer}>
+                <Ionicons name="warning-outline" size={24} color="#C0392B" />
+              </View>
+              <Text style={styles.modalTitle}>Eliminar Productor</Text>
+              <TouchableOpacity
+                onPress={() => setModalEliminarVisible(false)}
+                disabled={eliminando}
+              >
+                <Ionicons name="close" size={24} color="#333333" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.deleteWarningText}>
+              ¿Estás seguro de que deseás eliminar a{" "}
+              <Text style={{ fontWeight: "bold", color: "#1F1F1F" }}>
+                "{productorAEliminar?.nombre}"
+              </Text>
+              ? Esta acción quitará al productor de la base de datos de manera
+              permanente.
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setModalEliminarVisible(false)}
+                disabled={eliminando}
+              >
+                <Text style={styles.cancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.deleteBtn, eliminando && styles.buttonDisabled]}
+                onPress={handleConfirmarEliminar}
+                disabled={eliminando}
+              >
+                {eliminando ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.deleteBtnText}>Eliminar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* SelectModal para Localidades de Salta */}
+      <SelectModal
+        visible={selectLocalidadVisible}
+        title="Seleccionar Localidad (Salta)"
+        placeholder="Buscar municipio o localidad..."
+        options={opcionesLocalidades}
+        selectedId={targetModal === "agregar" ? nuevaLocalidad : editLocalidad}
+        onSelect={handleSeleccionarLocalidad}
+        onClose={() => setSelectLocalidadVisible(false)}
+      />
+
+      {/* SelectModal para Productos */}
+      <SelectModal
+        visible={selectProductoVisible}
+        title="Seleccionar Producto"
+        placeholder="Buscar producto..."
+        options={opcionesProductos}
+        selectedId={
+          targetModal === "agregar" ? nuevoProducto?.id : editProducto?.id
+        }
+        onSelect={handleSeleccionarProducto}
+        onClose={() => setSelectProductoVisible(false)}
+      />
 
       {/* Barra de Navegación Inferior */}
       <BottomNav currentTab="productores" />
@@ -489,9 +829,41 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#333333",
   },
+  loadingArea: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#777777",
+  },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 90,
+  },
+  emptyContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E6E1DA",
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#333333",
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#777777",
+    textAlign: "center",
+    marginTop: 4,
   },
   cardContainer: {
     backgroundColor: "#FFFFFF",
@@ -543,7 +915,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   locationRow: {
     flexDirection: "row",
@@ -610,10 +982,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  dangerIconContainer: {
+    marginRight: 8,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#1F1F1F",
+    flex: 1,
   },
   detalleContainer: {
     alignItems: "center",
@@ -634,7 +1010,7 @@ const styles = StyleSheet.create({
   detalleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
     width: "100%",
   },
   detalleLabel: {
@@ -662,7 +1038,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#333333",
-    marginTop: 10,
+    marginTop: 12,
     marginBottom: 4,
   },
   modalInput: {
@@ -673,6 +1049,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
+    color: "#333333",
+  },
+  selectButton: {
+    backgroundColor: "#F9F9F9",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  selectButtonText: {
+    fontSize: 15,
+    color: "#333333",
+  },
+  selectPlaceholder: {
+    color: "#999999",
+  },
+  selectedProductRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  colorDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.1)",
+  },
+  deleteWarningText: {
+    fontSize: 15,
+    color: "#555555",
+    lineHeight: 22,
+    marginVertical: 14,
   },
   modalButtons: {
     flexDirection: "row",
@@ -693,9 +1106,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
+    minWidth: 90,
+    alignItems: "center",
   },
   saveBtnText: {
     color: "#FFFFFF",
     fontWeight: "bold",
+  },
+  deleteBtn: {
+    backgroundColor: "#C0392B",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: "center",
+  },
+  deleteBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

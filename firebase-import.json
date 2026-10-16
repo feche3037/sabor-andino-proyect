@@ -1,0 +1,182 @@
+{
+  "usuarios": {
+    "seed-ce0336f2": {
+      "uid": "seed-ce0336f2",
+      "nombre": "Luciana",
+      "apellido": "Ríos",
+      "email": "luciana.rios@ejemplo.com",
+      "telefono": "387 455-0192",
+      "puesto": "Auxiliar administrativa",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "seed-056ca94d": {
+      "uid": "seed-056ca94d",
+      "nombre": "Martín",
+      "apellido": "Quispe",
+      "email": "martin.quispe@ejemplo.com",
+      "telefono": "387 422-7731",
+      "puesto": "Coordinador de productores",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "seed-9ff154be": {
+      "uid": "seed-9ff154be",
+      "nombre": "Carolina",
+      "apellido": "Flores",
+      "email": "carolina.flores@ejemplo.com",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    }
+  },
+  "productos": {
+    "c79e22cf-63cb-43fd-8f92-a9aa3744c0ff": {
+      "id": "c79e22cf-63cb-43fd-8f92-a9aa3744c0ff",
+      "nombre": "Pimentón dulce",
+      "color": "#8B2613",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "b3e3426b-096e-44d0-9660-5807bdc90e19": {
+      "id": "b3e3426b-096e-44d0-9660-5807bdc90e19",
+      "nombre": "Ají molido",
+      "color": "#C0392B",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "0c608a70-6f3c-4ebf-acb2-3d7bb790b543": {
+      "id": "0c608a70-6f3c-4ebf-acb2-3d7bb790b543",
+      "nombre": "Comino",
+      "color": "#B8860B",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "af79b09b-5b62-4ad1-b9ad-1969d714987d": {
+      "id": "af79b09b-5b62-4ad1-b9ad-1969d714987d",
+      "nombre": "Orégano",
+      "color": "#2E6930",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "b522f0c5-a4e3-4ced-9769-8f2fed547b59": {
+      "id": "b522f0c5-a4e3-4ced-9769-8f2fed547b59",
+      "nombre": "Cúrcuma",
+      "color": "#E8A338",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "08c85515-881b-4ae1-b7d6-368ca4d1fbe0": {
+      "id": "08c85515-881b-4ae1-b7d6-368ca4d1fbe0",
+      "nombre": "Ají picante",
+      "color": "#D35400",
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    }
+  },
+  "productores": {
+    "f40a1e93-e8d9-4071-a40c-bf81ba873b08": {
+      "id": "f40a1e93-e8d9-4071-a40c-bf81ba873b08",
+      "nombre": "Marta Guanuco",
+      "localidad": "Cachi",
+      "iniciales": "MG",
+      "producto": {
+        "id": "c79e22cf-63cb-43fd-8f92-a9aa3744c0ff",
+        "nombre": "Pimentón dulce",
+        "color": "#8B2613"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "b9592d46-32a8-4ec9-89b4-98e56d17e14d": {
+      "id": "b9592d46-32a8-4ec9-89b4-98e56d17e14d",
+      "nombre": "Ramón Colque",
+      "localidad": "Payogasta",
+      "iniciales": "RC",
+      "producto": {
+        "id": "b3e3426b-096e-44d0-9660-5807bdc90e19",
+        "nombre": "Ají molido",
+        "color": "#C0392B"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "b0ff11e9-ef6a-45e1-b325-2a4e6e248d99": {
+      "id": "b0ff11e9-ef6a-45e1-b325-2a4e6e248d99",
+      "nombre": "Rosa Chauque",
+      "localidad": "San Carlos",
+      "iniciales": "RC",
+      "producto": {
+        "id": "0c608a70-6f3c-4ebf-acb2-3d7bb790b543",
+        "nombre": "Comino",
+        "color": "#B8860B"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "1b69513b-51da-4c0d-a346-2a59d9ed35d7": {
+      "id": "1b69513b-51da-4c0d-a346-2a59d9ed35d7",
+      "nombre": "Julián Vilte",
+      "localidad": "Molinos",
+      "iniciales": "JV",
+      "producto": {
+        "id": "af79b09b-5b62-4ad1-b9ad-1969d714987d",
+        "nombre": "Orégano",
+        "color": "#2E6930"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "9f67784f-d100-418c-9900-dbac05898755": {
+      "id": "9f67784f-d100-418c-9900-dbac05898755",
+      "nombre": "Elena Cruz",
+      "localidad": "Angastaco",
+      "iniciales": "EC",
+      "producto": {
+        "id": "b522f0c5-a4e3-4ced-9769-8f2fed547b59",
+        "nombre": "Cúrcuma",
+        "color": "#E8A338"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "487dd79b-ae94-46ef-823e-32a37f17c583": {
+      "id": "487dd79b-ae94-46ef-823e-32a37f17c583",
+      "nombre": "Teodoro Mamaní",
+      "localidad": "Seclantás",
+      "iniciales": "TM",
+      "producto": {
+        "id": "08c85515-881b-4ae1-b7d6-368ca4d1fbe0",
+        "nombre": "Ají picante",
+        "color": "#D35400"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "77d4126d-b975-42eb-aa69-4054c30e24e8": {
+      "id": "77d4126d-b975-42eb-aa69-4054c30e24e8",
+      "nombre": "Norma Tolaba",
+      "localidad": "Cafayate",
+      "iniciales": "NT",
+      "producto": {
+        "id": "c79e22cf-63cb-43fd-8f92-a9aa3744c0ff",
+        "nombre": "Pimentón dulce",
+        "color": "#8B2613"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "10f755df-8290-4591-a66c-9d3d057011c5": {
+      "id": "10f755df-8290-4591-a66c-9d3d057011c5",
+      "nombre": "Aurelio Casimiro",
+      "localidad": "La Poma",
+      "iniciales": "AC",
+      "producto": {
+        "id": "b3e3426b-096e-44d0-9660-5807bdc90e19",
+        "nombre": "Ají molido",
+        "color": "#C0392B"
+      },
+      "createdAt": "2026-10-01T10:00:00.000Z",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    }
+  }
+}

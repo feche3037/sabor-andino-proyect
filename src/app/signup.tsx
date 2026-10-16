@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StatusBar,
@@ -13,8 +14,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAuth } from "@/context/auth-context";
+
 export default function SignupScreen() {
   const router = useRouter();
+  const { register } = useAuth();
 
   // Estados del formulario
   const [nombre, setNombre] = useState("");
@@ -26,9 +30,30 @@ export default function SignupScreen() {
   // Control para mostrar u ocultar contraseñas
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Mapeo amigable de errores de Firebase Auth
+  const getErrorMessage = (error: unknown): string => {
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const code = (error as { code: string }).code;
+      switch (code) {
+        case "auth/email-already-in-use":
+          return "Ya existe una cuenta con este correo electrónico.";
+        case "auth/invalid-email":
+          return "El formato de correo no es válido.";
+        case "auth/weak-password":
+          return "La contraseña debe tener al menos 6 caracteres.";
+        case "auth/network-request-failed":
+          return "Error de red. Verifica tu conexión a internet.";
+        default:
+          return "No se pudo completar el registro. Intenta nuevamente.";
+      }
+    }
+    return "Ocurrió un error inesperado durante el registro.";
+  };
 
   // Función para procesar y validar el registro
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (
       !nombre.trim() ||
       !apellido.trim() ||
@@ -56,17 +81,16 @@ export default function SignupScreen() {
       return;
     }
 
-    // Alerta de éxito y redirección al Login
-    Alert.alert(
-      "¡Registro exitoso!",
-      `Bienvenido/a ${nombre}. Tu cuenta ha sido creada correctamente.`,
-      [
-        {
-          text: "Iniciar Sesión",
-          onPress: () => router.replace("/login"),
-        },
-      ],
-    );
+    try {
+      setLoading(true);
+      await register(nombre, apellido, email, password);
+      // Redirigir a Home directamente ya autenticado
+      router.replace("/home");
+    } catch (error) {
+      Alert.alert("Error de registro", getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,6 +105,7 @@ export default function SignupScreen() {
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace("/login")
             }
+            disabled={loading}
           >
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -97,7 +122,7 @@ export default function SignupScreen() {
       </View>
 
       {/* Formulario de registro */}
-      <ScrollView contentContainerStyle={styles.formContainer}>
+      <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
         {/* Campo Nombre */}
         <Text style={styles.label}>Nombre</Text>
         <TextInput
@@ -106,6 +131,7 @@ export default function SignupScreen() {
           placeholderTextColor="#9E9E9E"
           value={nombre}
           onChangeText={setNombre}
+          editable={!loading}
         />
 
         {/* Campo Apellido */}
@@ -116,6 +142,7 @@ export default function SignupScreen() {
           placeholderTextColor="#9E9E9E"
           value={apellido}
           onChangeText={setApellido}
+          editable={!loading}
         />
 
         {/* Campo Correo electrónico */}
@@ -128,6 +155,7 @@ export default function SignupScreen() {
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
+          editable={!loading}
         />
 
         {/* Campo Contraseña */}
@@ -140,8 +168,12 @@ export default function SignupScreen() {
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
+            editable={!loading}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            disabled={loading}
+          >
             <Text style={styles.showText}>
               {showPassword ? "Ocultar" : "Mostrar"}
             </Text>
@@ -159,9 +191,11 @@ export default function SignupScreen() {
             secureTextEntry={!showConfirmPassword}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
+            editable={!loading}
           />
           <TouchableOpacity
             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            disabled={loading}
           >
             <Text style={styles.showText}>
               {showConfirmPassword ? "Ocultar" : "Mostrar"}
@@ -169,9 +203,18 @@ export default function SignupScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Botón Registrarse con evento onPress vinculado */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleRegister}>
-          <Text style={styles.submitButtonText}>Registrarse</Text>
+        {/* Botón Registrarse */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleRegister}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitButtonText}>Registrarse</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -278,6 +321,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
     marginBottom: 20,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
   submitButtonText: {
     color: "#FFFFFF",

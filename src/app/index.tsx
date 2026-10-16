@@ -1,6 +1,7 @@
 import { Redirect } from "expo-router";
+import { useAuth } from "@/context/auth-context";
 
 export default function Index() {
-  // Redirige automáticamente a /login al abrir la app
-  return <Redirect href="/login" />;
+  const { user } = useAuth();
+  return <Redirect href={user ? "/home" : "/login"} />;
 }
