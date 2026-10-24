@@ -24,123 +24,189 @@ interface SelectModalProps {
   placeholder?: string;
   options: SelectOption[];
   selectedId?: string;
-  onSelect: (option: SelectOption) => void;
+  selectedIds?: string[];
+  multiple?: boolean;
+  onSelect?: (option: SelectOption) => void;
+  onSelectMultiple?: (selected: SelectOption[]) => void;
   onClose: () => void;
 }
 
-export function SelectModal({
-  visible,
+function SelectModalContent({
   title,
   placeholder = "Buscar...",
   options,
   selectedId,
+  selectedIds = [],
+  multiple = false,
   onSelect,
+  onSelectMultiple,
   onClose,
-}: SelectModalProps) {
+}: Omit<SelectModalProps, "visible">) {
   const [busqueda, setBusqueda] = useState("");
-
-  const opcionesFiltradas = options.filter((opt) =>
-    opt.label.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (opt.subtitle && opt.subtitle.toLowerCase().includes(busqueda.toLowerCase())),
+  const [currentSelectedIds, setCurrentSelectedIds] = useState<string[]>(
+    () => selectedIds || [],
   );
 
-  const handleSelect = (option: SelectOption) => {
-    onSelect(option);
-    setBusqueda("");
+  const opcionesFiltradas = options.filter(
+    (opt) =>
+      opt.label.toLowerCase().includes(busqueda.toLowerCase()) ||
+      (opt.subtitle && opt.subtitle.toLowerCase().includes(busqueda.toLowerCase())),
+  );
+
+  const handleSingleSelect = (option: SelectOption) => {
+    if (onSelect) {
+      onSelect(option);
+    }
+    onClose();
+  };
+
+  const handleToggleMultiple = (option: SelectOption) => {
+    setCurrentSelectedIds((prev) => {
+      if (prev.includes(option.id)) {
+        return prev.filter((id) => id !== option.id);
+      } else {
+        return [...prev, option.id];
+      }
+    });
+  };
+
+  const handleConfirmMultiple = () => {
+    if (onSelectMultiple) {
+      const selectedOpts = options.filter((opt) =>
+        currentSelectedIds.includes(opt.id),
+      );
+      onSelectMultiple(selectedOpts);
+    }
     onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={styles.overlay}>
-        <SafeAreaView style={styles.modalCard} edges={["bottom"]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color="#333333" />
+    <View style={styles.overlay}>
+      <SafeAreaView style={styles.modalCard} edges={["bottom"]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Ionicons name="close" size={24} color="#333333" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Buscador */}
+        <View style={styles.searchBar}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color="#777777"
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={placeholder}
+            placeholderTextColor="#999999"
+            value={busqueda}
+            onChangeText={setBusqueda}
+            autoCorrect={false}
+          />
+          {busqueda.length > 0 && (
+            <TouchableOpacity onPress={() => setBusqueda("")}>
+              <Ionicons name="close-circle" size={18} color="#999999" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Lista de opciones */}
+        <FlatList
+          data={opcionesFiltradas}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No se encontraron resultados.</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const isSelected = multiple
+              ? currentSelectedIds.includes(item.id)
+              : item.id === selectedId;
+
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  isSelected && styles.optionItemSelected,
+                ]}
+                onPress={() =>
+                  multiple
+                    ? handleToggleMultiple(item)
+                    : handleSingleSelect(item)
+                }
+                activeOpacity={0.7}
+              >
+                <View style={styles.optionLeft}>
+                  {item.color && (
+                    <View
+                      style={[
+                        styles.colorDot,
+                        { backgroundColor: item.color },
+                      ]}
+                    />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        isSelected && styles.optionLabelSelected,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {item.subtitle ? (
+                      <Text style={styles.optionSubtitle}>
+                        {item.subtitle}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+
+                <Ionicons
+                  name={
+                    isSelected
+                      ? "checkmark-circle"
+                      : multiple
+                      ? "ellipse-outline"
+                      : undefined
+                  }
+                  size={20}
+                  color={isSelected ? "#7A2214" : "#CCCCCC"}
+                />
+              </TouchableOpacity>
+            );
+          }}
+        />
+
+        {/* Botón de Confirmación para Selección Múltiple */}
+        {multiple && (
+          <View style={styles.footerContainer}>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              activeOpacity={0.85}
+              onPress={handleConfirmMultiple}
+            >
+              <Text style={styles.confirmButtonText}>
+                Confirmar selección ({currentSelectedIds.length})
+              </Text>
             </TouchableOpacity>
           </View>
+        )}
+      </SafeAreaView>
+    </View>
+  );
+}
 
-          {/* Buscador */}
-          <View style={styles.searchBar}>
-            <Ionicons
-              name="search-outline"
-              size={18}
-              color="#777777"
-              style={{ marginRight: 8 }}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={placeholder}
-              placeholderTextColor="#999999"
-              value={busqueda}
-              onChangeText={setBusqueda}
-              autoCorrect={false}
-            />
-            {busqueda.length > 0 && (
-              <TouchableOpacity onPress={() => setBusqueda("")}>
-                <Ionicons name="close-circle" size={18} color="#999999" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Lista de opciones */}
-          <FlatList
-            data={opcionesFiltradas}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No se encontraron resultados.</Text>
-              </View>
-            }
-            renderItem={({ item }) => {
-              const isSelected = item.id === selectedId;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.optionItem,
-                    isSelected && styles.optionItemSelected,
-                  ]}
-                  onPress={() => handleSelect(item)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.optionLeft}>
-                    {item.color && (
-                      <View
-                        style={[
-                          styles.colorDot,
-                          { backgroundColor: item.color },
-                        ]}
-                      />
-                    )}
-                    <View>
-                      <Text
-                        style={[
-                          styles.optionLabel,
-                          isSelected && styles.optionLabelSelected,
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                      {item.subtitle ? (
-                        <Text style={styles.optionSubtitle}>
-                          {item.subtitle}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-
-                  {isSelected && (
-                    <Ionicons name="checkmark-circle" size={20} color="#7A2214" />
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </SafeAreaView>
-      </View>
+export function SelectModal(props: SelectModalProps) {
+  return (
+    <Modal visible={props.visible} animationType="slide" transparent={true}>
+      {props.visible ? <SelectModalContent {...props} /> : null}
     </Modal>
   );
 }
@@ -155,8 +221,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "80%",
-    minHeight: "50%",
+    maxHeight: "85%",
+    minHeight: "55%",
     paddingTop: 16,
   },
   header: {
@@ -195,6 +261,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingVertical: 8,
+    paddingBottom: 16,
   },
   optionItem: {
     flexDirection: "row",
@@ -243,5 +310,22 @@ const styles = StyleSheet.create({
     color: "#888888",
     fontSize: 14,
   },
+  footerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#EEEEEE",
+  },
+  confirmButton: {
+    backgroundColor: "#7A2214",
+    paddingVertical: 13,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  confirmButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
 });
-

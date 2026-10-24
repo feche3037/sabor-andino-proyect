@@ -3,7 +3,8 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -15,6 +16,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/auth-context";
+import {
+  validarEmail,
+  validarNombre,
+  validarPassword,
+} from "@/utils/validations";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -31,6 +37,7 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Mapeo amigable de errores de Firebase Auth
   const getErrorMessage = (error: unknown): string => {
@@ -42,7 +49,7 @@ export default function SignupScreen() {
         case "auth/invalid-email":
           return "El formato de correo no es válido.";
         case "auth/weak-password":
-          return "La contraseña debe tener al menos 6 caracteres.";
+          return "La contraseña ingresada no cumple los requisitos de seguridad.";
         case "auth/network-request-failed":
           return "Error de red. Verifica tu conexión a internet.";
         default:
@@ -52,42 +59,52 @@ export default function SignupScreen() {
     return "Ocurrió un error inesperado durante el registro.";
   };
 
+  // Requisitos de contraseña para feedback visual
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
   // Función para procesar y validar el registro
   const handleRegister = async () => {
-    if (
-      !nombre.trim() ||
-      !apellido.trim() ||
-      !email.trim() ||
-      !password ||
-      !confirmPassword
-    ) {
-      Alert.alert(
-        "Campos incompletos",
-        "Por favor, completá todos los campos.",
-      );
+    setErrorMessage(null);
+
+    const errNom = validarNombre(nombre);
+    if (errNom) {
+      setErrorMessage(`Nombre: ${errNom}`);
+      return;
+    }
+
+    const errApe = validarNombre(apellido);
+    if (errApe) {
+      setErrorMessage(`Apellido: ${errApe}`);
+      return;
+    }
+
+    const errEmail = validarEmail(email);
+    if (errEmail) {
+      setErrorMessage(errEmail);
+      return;
+    }
+
+    const errPass = validarPassword(password);
+    if (errPass) {
+      setErrorMessage(errPass);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error de contraseña", "Las contraseñas no coinciden.");
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert(
-        "Contraseña débil",
-        "La contraseña debe tener al menos 6 caracteres.",
-      );
+      setErrorMessage("Las contraseñas no coinciden.");
       return;
     }
 
     try {
       setLoading(true);
       await register(nombre, apellido, email, password);
-      // Redirigir a Home directamente ya autenticado
-      router.replace("/home");
+      // Redirigir a la pantalla de verificación de correo
+      router.replace("/verify-email");
     } catch (error) {
-      Alert.alert("Error de registro", getErrorMessage(error));
+      setErrorMessage(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -121,102 +138,209 @@ export default function SignupScreen() {
         </Text>
       </View>
 
-      {/* Formulario de registro */}
-      <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
-        {/* Campo Nombre */}
-        <Text style={styles.label}>Nombre</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Tu nombre"
-          placeholderTextColor="#9E9E9E"
-          value={nombre}
-          onChangeText={setNombre}
-          editable={!loading}
-        />
-
-        {/* Campo Apellido */}
-        <Text style={styles.label}>Apellido</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Tu apellido"
-          placeholderTextColor="#9E9E9E"
-          value={apellido}
-          onChangeText={setApellido}
-          editable={!loading}
-        />
-
-        {/* Campo Correo electrónico */}
-        <Text style={styles.label}>Correo electrónico</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="tucorreo@ejemplo.com"
-          placeholderTextColor="#9E9E9E"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-          editable={!loading}
-        />
-
-        {/* Campo Contraseña */}
-        <Text style={styles.label}>Contraseña</Text>
-        <View style={styles.passwordInputContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Elegí una contraseña"
-            placeholderTextColor="#9E9E9E"
-            secureTextEntry={!showPassword}
-            value={password}
-            onChangeText={setPassword}
-            editable={!loading}
-          />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            disabled={loading}
-          >
-            <Text style={styles.showText}>
-              {showPassword ? "Ocultar" : "Mostrar"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.helperText}>Al menos 6 caracteres.</Text>
-
-        {/* Campo Confirmar contraseña */}
-        <Text style={styles.label}>Confirmar contraseña</Text>
-        <View style={styles.passwordInputContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Repetí la contraseña"
-            placeholderTextColor="#9E9E9E"
-            secureTextEntry={!showConfirmPassword}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            editable={!loading}
-          />
-          <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            disabled={loading}
-          >
-            <Text style={styles.showText}>
-              {showConfirmPassword ? "Ocultar" : "Mostrar"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Botón Registrarse */}
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-          activeOpacity={0.8}
+      {/* Formulario de registro adaptativo a teclado */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.formContainer}
+          keyboardShouldPersistTaps="handled"
         >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>Registrarse</Text>
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={20} color="#D32F2F" />
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+            </View>
           )}
-        </TouchableOpacity>
-      </ScrollView>
+
+          {/* Campo Nombre */}
+          <Text style={styles.label}>Nombre</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Tu nombre (solo letras)"
+            placeholderTextColor="#9E9E9E"
+            value={nombre}
+            onChangeText={(t) => {
+              setNombre(t);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            editable={!loading}
+          />
+
+          {/* Campo Apellido */}
+          <Text style={styles.label}>Apellido</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Tu apellido (solo letras)"
+            placeholderTextColor="#9E9E9E"
+            value={apellido}
+            onChangeText={(t) => {
+              setApellido(t);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            editable={!loading}
+          />
+
+          {/* Campo Correo electrónico */}
+          <Text style={styles.label}>Correo electrónico</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="tucorreo@ejemplo.com"
+            placeholderTextColor="#9E9E9E"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={(t) => {
+              setEmail(t);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            editable={!loading}
+          />
+
+          {/* Campo Contraseña */}
+          <Text style={styles.label}>Contraseña</Text>
+          <View style={styles.passwordInputContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Contraseña segura"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              disabled={loading}
+            >
+              <Text style={styles.showText}>
+                {showPassword ? "Ocultar" : "Mostrar"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Indicadores visuales de requisitos de contraseña */}
+          <View style={styles.passwordRequirementsContainer}>
+            <Text style={styles.requirementsTitle}>
+              Requisitos de contraseña:
+            </Text>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasMinLength ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasMinLength ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasMinLength && styles.requirementMet,
+                ]}
+              >
+                Mínimo 8 caracteres
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasUppercase ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasUppercase ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasUppercase && styles.requirementMet,
+                ]}
+              >
+                Al menos una letra mayúscula
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasNumber ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasNumber ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasNumber && styles.requirementMet,
+                ]}
+              >
+                Al menos un número
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasSpecial ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasSpecial ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasSpecial && styles.requirementMet,
+                ]}
+              >
+                Al menos un carácter especial (!@#$%^&*)
+              </Text>
+            </View>
+          </View>
+
+          {/* Campo Confirmar contraseña */}
+          <Text style={styles.label}>Confirmar contraseña</Text>
+          <View style={styles.passwordInputContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Repetí la contraseña"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry={!showConfirmPassword}
+              value={confirmPassword}
+              onChangeText={(t) => {
+                setConfirmPassword(t);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={loading}
+            >
+              <Text style={styles.showText}>
+                {showConfirmPassword ? "Ocultar" : "Mostrar"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Botón Registrarse */}
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>Registrarse</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Enlace para ir a Login */}
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>¿Ya tenés una cuenta?</Text>
+            <TouchableOpacity
+              onPress={() => router.replace("/login")}
+              disabled={loading}
+            >
+              <Text style={styles.loginLink}> Iniciar sesión</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -229,24 +353,21 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#8B2613",
     paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 24,
+    paddingTop: 16,
+    paddingBottom: 22,
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
   backButton: {
+    padding: 6,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+    borderRadius: 8,
   },
   logoContainer: {
     flexDirection: "row",
@@ -256,13 +377,13 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
-    marginLeft: 8,
+    marginLeft: 6,
   },
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   headerSubtitle: {
     color: "#E0C8C3",
@@ -270,6 +391,24 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     padding: 24,
+    paddingBottom: 40,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorBannerText: {
+    color: "#C62828",
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
   },
   label: {
     fontSize: 14,
@@ -308,11 +447,34 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 13,
   },
-  helperText: {
-    color: "#777777",
+  passwordRequirementsContainer: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#EAE5DE",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 6,
+    gap: 6,
+  },
+  requirementsTitle: {
     fontSize: 12,
-    marginTop: 4,
-    marginBottom: 4,
+    fontWeight: "700",
+    color: "#555555",
+    marginBottom: 2,
+  },
+  requirementItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  requirementText: {
+    fontSize: 12,
+    color: "#777777",
+  },
+  requirementMet: {
+    color: "#2E7D32",
+    fontWeight: "600",
   },
   submitButton: {
     backgroundColor: "#8B2613",
@@ -329,5 +491,19 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  footerContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  footerText: {
+    color: "#555555",
+    fontSize: 14,
+  },
+  loginLink: {
+    color: "#8B2613",
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });

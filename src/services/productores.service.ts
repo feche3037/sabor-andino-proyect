@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "@/config/firebase";
-import { Productor, Producto } from "@/types";
+import { Productor, Producto, RedesSociales } from "@/types";
 
 const COLECCION_PRODUCTORES = "productores";
 
@@ -39,8 +39,17 @@ export function suscribirProductores(
     q,
     (snapshot) => {
       const productores: Productor[] = [];
-      snapshot.forEach((doc) => {
-        productores.push(doc.data() as Productor);
+      snapshot.forEach((d) => {
+        const data = d.data();
+        // Compatibilidad con esquema legacy de producto 1:1
+        let productosIds = data.productosIds || [];
+        if (!productosIds.length && data.producto && data.producto.id) {
+          productosIds = [data.producto.id];
+        }
+        productores.push({
+          ...(data as Productor),
+          productosIds,
+        });
       });
       onUpdate(productores);
     },
@@ -59,8 +68,16 @@ export async function obtenerProductores(): Promise<Productor[]> {
     const q = query(collection(db, COLECCION_PRODUCTORES), orderBy("nombre", "asc"));
     const snapshot = await getDocs(q);
     const productores: Productor[] = [];
-    snapshot.forEach((doc) => {
-      productores.push(doc.data() as Productor);
+    snapshot.forEach((d) => {
+      const data = d.data();
+      let productosIds = data.productosIds || [];
+      if (!productosIds.length && data.producto && data.producto.id) {
+        productosIds = [data.producto.id];
+      }
+      productores.push({
+        ...(data as Productor),
+        productosIds,
+      });
     });
     return productores;
   } catch (error) {
@@ -70,12 +87,17 @@ export async function obtenerProductores(): Promise<Productor[]> {
 }
 
 /**
- * Crea un productor con UUID autogenerado
+ * Crea un productor con relación N:M a productos
  */
 export async function crearProductor(data: {
   nombre: string;
   localidad: string;
-  producto: Producto;
+  productosIds?: string[];
+  producto?: Producto;
+  direccion?: string;
+  celular?: string;
+  redesSociales?: RedesSociales;
+  fotoUrl?: string | null;
 }): Promise<Productor> {
   try {
     const id = Crypto.randomUUID();
@@ -86,11 +108,19 @@ export async function crearProductor(data: {
       id,
       nombre: data.nombre.trim(),
       localidad: data.localidad.trim(),
-      producto: data.producto,
       iniciales,
+      productosIds: data.productosIds || (data.producto ? [data.producto.id] : []),
+      direccion: data.direccion?.trim() || "",
+      celular: data.celular?.trim() || "",
+      redesSociales: data.redesSociales || {},
+      fotoUrl: data.fotoUrl || null,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
+
+    if (data.producto) {
+      nuevoProductor.producto = data.producto;
+    }
 
     const docRef = doc(db, COLECCION_PRODUCTORES, id);
     await setDoc(docRef, nuevoProductor);
@@ -106,11 +136,7 @@ export async function crearProductor(data: {
  */
 export async function actualizarProductor(
   id: string,
-  data: {
-    nombre?: string;
-    localidad?: string;
-    producto?: Producto;
-  },
+  data: Partial<Omit<Productor, "id" | "createdAt">>,
 ): Promise<void> {
   try {
     const docRef = doc(db, COLECCION_PRODUCTORES, id);
@@ -142,4 +168,3 @@ export async function eliminarProductor(id: string): Promise<void> {
     throw error;
   }
 }
-

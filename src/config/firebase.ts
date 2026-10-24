@@ -8,6 +8,7 @@ import {
   initializeAuth,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // Configuración de Firebase leída de variables de entorno públicas de Expo (o valores de respaldo para desarrollo)
 const firebaseConfig = {
@@ -45,5 +46,5 @@ try {
 
 export const auth = authInstance;
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 export default app;
-

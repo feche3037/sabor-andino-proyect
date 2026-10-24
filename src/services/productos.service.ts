@@ -28,8 +28,8 @@ export function suscribirProductos(
     q,
     (snapshot) => {
       const productos: Producto[] = [];
-      snapshot.forEach((doc) => {
-        productos.push(doc.data() as Producto);
+      snapshot.forEach((d) => {
+        productos.push(d.data() as Producto);
       });
       onUpdate(productos);
     },
@@ -48,8 +48,8 @@ export async function obtenerProductos(): Promise<Producto[]> {
     const q = query(collection(db, COLECCION_PRODUCTOS), orderBy("nombre", "asc"));
     const snapshot = await getDocs(q);
     const productos: Producto[] = [];
-    snapshot.forEach((doc) => {
-      productos.push(doc.data() as Producto);
+    snapshot.forEach((d) => {
+      productos.push(d.data() as Producto);
     });
     return productos;
   } catch (error) {
@@ -59,7 +59,7 @@ export async function obtenerProductos(): Promise<Producto[]> {
 }
 
 /**
- * Crea un producto con UUID autogenerado
+ * Crea un producto con UUID autogenerado y nuevos campos
  */
 export async function crearProducto(
   data: Omit<Producto, "id" | "createdAt" | "updatedAt">,
@@ -71,6 +71,11 @@ export async function crearProducto(
       id,
       nombre: data.nombre.trim(),
       color: data.color.trim(),
+      lote: data.lote?.trim() || "",
+      stock: data.stock !== undefined ? Number(data.stock) : 0,
+      presentacion: data.presentacion?.trim() || "",
+      fotoUrl: data.fotoUrl || null,
+      productoresIds: data.productoresIds || [],
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -89,7 +94,7 @@ export async function crearProducto(
  */
 export async function actualizarProducto(
   id: string,
-  data: Partial<Omit<Producto, "id">>,
+  data: Partial<Omit<Producto, "id" | "createdAt">>,
 ): Promise<void> {
   try {
     const docRef = doc(db, COLECCION_PRODUCTOS, id);
@@ -115,4 +120,3 @@ export async function eliminarProducto(id: string): Promise<void> {
     throw error;
   }
 }
-

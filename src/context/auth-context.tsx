@@ -1,6 +1,9 @@
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  reload,
+  sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -33,6 +36,9 @@ interface AuthContextType {
     password: string,
   ) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfileData: (data: Partial<Omit<Usuario, "uid">>) => Promise<void>;
 }
@@ -52,7 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const profile = await obtenerUsuario(firebaseUser.uid);
           if (profile) {
-            setUserProfile(profile);
+            setUserProfile({
+              ...profile,
+              emailVerified: firebaseUser.emailVerified,
+            });
           } else {
             // Si el documento en Firestore no existe todavía, crear uno base
             const fallbackProfile: Usuario = {
@@ -60,7 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: firebaseUser.email || "",
               nombre: firebaseUser.displayName?.split(" ")[0] || "Usuario",
               apellido: firebaseUser.displayName?.split(" ")[1] || "",
-              puesto: "Colaborador",
+              fotoUrl: firebaseUser.photoURL || null,
+              emailVerified: firebaseUser.emailVerified,
               createdAt: new Date().toISOString(),
             };
             await guardarUsuario(fallbackProfile);
@@ -81,10 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-      // Cargar perfil tras login
+      setUser(cred.user);
       const profile = await obtenerUsuario(cred.user.uid);
       if (profile) {
-        setUserProfile(profile);
+        setUserProfile({
+          ...profile,
+          emailVerified: cred.user.emailVerified,
+        });
       }
     } catch (error) {
       console.error("Error en login:", error);
@@ -110,21 +123,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName: `${nombre.trim()} ${apellido.trim()}`,
       });
 
+      // Enviar correo de verificación inicial
+      try {
+        await sendEmailVerification(cred.user);
+      } catch (err) {
+        console.warn("No se pudo enviar el correo de verificación automático:", err);
+      }
+
       // Crear documento del perfil en Firestore
       const nuevoPerfil: Usuario = {
         uid: cred.user.uid,
         email: email.trim(),
         nombre: nombre.trim(),
         apellido: apellido.trim(),
-        puesto: "Auxiliar",
+        fotoUrl: null,
+        emailVerified: cred.user.emailVerified,
         createdAt: new Date().toISOString(),
       };
 
       await guardarUsuario(nuevoPerfil);
+      setUser(cred.user);
       setUserProfile(nuevoPerfil);
     } catch (error) {
       console.error("Error en registro:", error);
       throw error;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (error) {
+      console.error("Error al enviar correo de recuperación:", error);
+      throw error;
+    }
+  };
+
+  const sendVerificationEmail = async () => {
+    if (!auth.currentUser) throw new Error("No hay usuario autenticado.");
+    await sendEmailVerification(auth.currentUser);
+  };
+
+  const reloadUser = async () => {
+    if (auth.currentUser) {
+      await reload(auth.currentUser);
+      const updatedUser = { ...auth.currentUser } as User;
+      setUser(updatedUser);
+      if (userProfile) {
+        setUserProfile({
+          ...userProfile,
+          emailVerified: auth.currentUser.emailVerified,
+        });
+      }
     }
   };
 
@@ -143,13 +193,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       const profile = await obtenerUsuario(user.uid);
       if (profile) {
-        setUserProfile(profile);
+        setUserProfile({
+          ...profile,
+          emailVerified: user.emailVerified,
+        });
       }
     }
   };
 
   const updateProfileData = async (data: Partial<Omit<Usuario, "uid">>) => {
     if (!user) throw new Error("No hay usuario autenticado.");
+
+    // Sincronizar photoURL o displayName en Firebase Auth si viene en la carga
+    const authUpdates: { displayName?: string; photoURL?: string } = {};
+    if (data.nombre || data.apellido) {
+      const nom = data.nombre ?? userProfile?.nombre ?? "";
+      const ape = data.apellido ?? userProfile?.apellido ?? "";
+      authUpdates.displayName = `${nom} ${ape}`.trim();
+    }
+    if (data.fotoUrl !== undefined) {
+      authUpdates.photoURL = data.fotoUrl || "";
+    }
+    if (Object.keys(authUpdates).length > 0) {
+      await updateProfile(user, authUpdates);
+    }
+
     await actualizarUsuario(user.uid, data);
     setUserProfile((prev) => (prev ? { ...prev, ...data } : null));
   };
@@ -163,6 +231,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
+        resetPassword,
+        sendVerificationEmail,
+        reloadUser,
         refreshProfile,
         updateProfileData,
       }}
@@ -179,4 +250,3 @@ export function useAuth() {
   }
   return context;
 }
-
