@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export type BottomNavTab = "home" | "productores" | "perfil";
+export type BottomNavTab = "home" | "productores" | "productos" | "perfil";
 
 export interface BottomNavProps {
   currentTab?: BottomNavTab;
@@ -12,7 +12,7 @@ export interface BottomNavProps {
 interface TabConfig {
   key: BottomNavTab;
   label: string;
-  route: "/home" | "/productores" | "/perfil";
+  route: "/home" | "/productores" | "/productos" | "/perfil";
   activeIcon: keyof typeof Ionicons.glyphMap;
   inactiveIcon: keyof typeof Ionicons.glyphMap;
 }
@@ -33,6 +33,13 @@ const TABS: TabConfig[] = [
     inactiveIcon: "people-outline",
   },
   {
+    key: "productos",
+    label: "Productos",
+    route: "/productos",
+    activeIcon: "pricetag",
+    inactiveIcon: "pricetag-outline",
+  },
+  {
     key: "perfil",
     label: "Perfil",
     route: "/perfil",
@@ -46,13 +53,15 @@ export function BottomNav({ currentTab }: BottomNavProps) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  const activeTab: BottomNavTab =
-    currentTab ??
-    (pathname.includes("productores")
-      ? "productores"
-      : pathname.includes("perfil")
-      ? "perfil"
-      : "home");
+  const getActiveTab = (): BottomNavTab => {
+    if (currentTab) return currentTab;
+    if (pathname.includes("/productores")) return "productores";
+    if (pathname.includes("/productos")) return "productos";
+    if (pathname.includes("/perfil")) return "perfil";
+    return "home";
+  };
+
+  const activeTab: BottomNavTab = getActiveTab();
 
   const handleTabPress = (tab: TabConfig) => {
     if (activeTab === tab.key) return;
@@ -85,6 +94,7 @@ export function BottomNav({ currentTab }: BottomNavProps) {
                 styles.navLabel,
                 isActive && styles.activeNavLabel,
               ]}
+              numberOfLines={1}
             >
               {tab.label}
             </Text>
@@ -102,7 +112,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E0E0E0",
     paddingTop: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     justifyContent: "space-around",
     alignItems: "center",
   },
@@ -111,17 +121,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flex: 1,
     position: "relative",
+    paddingVertical: 2,
   },
   activeIndicator: {
     position: "absolute",
     top: -8,
-    width: 32,
+    width: 28,
     height: 4,
     backgroundColor: "#E8A338",
     borderRadius: 2,
   },
   navLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#666666",
     marginTop: 4,
   },
@@ -132,4 +143,3 @@ const styles = StyleSheet.create({
 });
 
 export default BottomNav;
-

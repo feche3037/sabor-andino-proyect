@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -13,8 +16,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BordeAndino } from "@/components/borde-andino";
+import { useAuth } from "@/context/auth-context";
+import {
+  validarEmail,
+  validarNombre,
+  validarPassword,
+} from "@/utils/validations";
+
 export default function SignupScreen() {
+  const LOGO_IMG = require("@/assets/images/logo.png");
   const router = useRouter();
+  const { register } = useAuth();
 
   // Estados del formulario
   const [nombre, setNombre] = useState("");
@@ -26,52 +39,83 @@ export default function SignupScreen() {
   // Control para mostrar u ocultar contraseñas
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Mapeo amigable de errores de Firebase Auth
+  const getErrorMessage = (error: unknown): string => {
+    if (typeof error === "object" && error !== null && "code" in error) {
+      const code = (error as { code: string }).code;
+      switch (code) {
+        case "auth/email-already-in-use":
+          return "Ya existe una cuenta con este correo electrónico.";
+        case "auth/invalid-email":
+          return "El formato de correo no es válido.";
+        case "auth/weak-password":
+          return "La contraseña ingresada no cumple los requisitos de seguridad.";
+        case "auth/network-request-failed":
+          return "Error de red. Verifica tu conexión a internet.";
+        default:
+          return "No se pudo completar el registro. Intenta nuevamente.";
+      }
+    }
+    return "Ocurrió un error inesperado durante el registro.";
+  };
+
+  // Requisitos de contraseña para feedback visual
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
 
   // Función para procesar y validar el registro
-  const handleRegister = () => {
-    if (
-      !nombre.trim() ||
-      !apellido.trim() ||
-      !email.trim() ||
-      !password ||
-      !confirmPassword
-    ) {
-      Alert.alert(
-        "Campos incompletos",
-        "Por favor, completá todos los campos.",
-      );
+  const handleRegister = async () => {
+    setErrorMessage(null);
+
+    const errNom = validarNombre(nombre);
+    if (errNom) {
+      setErrorMessage(`Nombre: ${errNom}`);
+      return;
+    }
+
+    const errApe = validarNombre(apellido);
+    if (errApe) {
+      setErrorMessage(`Apellido: ${errApe}`);
+      return;
+    }
+
+    const errEmail = validarEmail(email);
+    if (errEmail) {
+      setErrorMessage(errEmail);
+      return;
+    }
+
+    const errPass = validarPassword(password);
+    if (errPass) {
+      setErrorMessage(errPass);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error de contraseña", "Las contraseñas no coinciden.");
+      setErrorMessage("Las contraseñas no coinciden.");
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert(
-        "Contraseña débil",
-        "La contraseña debe tener al menos 6 caracteres.",
-      );
-      return;
+    try {
+      setLoading(true);
+      await register(nombre, apellido, email, password);
+      // Redirigir a la pantalla de verificación de correo
+      router.replace("/verify-email");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setLoading(false);
     }
-
-    // Alerta de éxito y redirección al Login
-    Alert.alert(
-      "¡Registro exitoso!",
-      `Bienvenido/a ${nombre}. Tu cuenta ha sido creada correctamente.`,
-      [
-        {
-          text: "Iniciar Sesión",
-          onPress: () => router.replace("/login"),
-        },
-      ],
-    );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#8B2613" />
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <StatusBar style="light" />
 
       {/* Encabezado Rojo Terracota con botón volver */}
       <View style={styles.header}>
@@ -81,11 +125,17 @@ export default function SignupScreen() {
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace("/login")
             }
+            disabled={loading}
           >
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.logoContainer}>
-            <Ionicons name="shapes" size={24} color="#E8A338" />
+            <Image
+              source={LOGO_IMG}
+              style={styles.logo}
+              contentFit="contain"
+              transition={200}
+            />
             <Text style={styles.logoText}>Sabor Andino</Text>
           </View>
         </View>
@@ -94,139 +144,289 @@ export default function SignupScreen() {
         <Text style={styles.headerSubtitle}>
           Completá tus datos para empezar.
         </Text>
+        <BordeAndino />
       </View>
 
-      {/* Formulario de registro */}
-      <ScrollView contentContainerStyle={styles.formContainer}>
-        {/* Campo Nombre */}
-        <Text style={styles.label}>Nombre</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Tu nombre"
-          placeholderTextColor="#9E9E9E"
-          value={nombre}
-          onChangeText={setNombre}
-        />
+      {/* Formulario de registro adaptativo a teclado */}
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: "#F4F0EA" }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.formContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          {errorMessage && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={20} color="#D32F2F" />
+              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+            </View>
+          )}
 
-        {/* Campo Apellido */}
-        <Text style={styles.label}>Apellido</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Tu apellido"
-          placeholderTextColor="#9E9E9E"
-          value={apellido}
-          onChangeText={setApellido}
-        />
-
-        {/* Campo Correo electrónico */}
-        <Text style={styles.label}>Correo electrónico</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="tucorreo@ejemplo.com"
-          placeholderTextColor="#9E9E9E"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        {/* Campo Contraseña */}
-        <Text style={styles.label}>Contraseña</Text>
-        <View style={styles.passwordInputContainer}>
+          {/* Campo Nombre */}
+          <Text style={styles.label}>Nombre</Text>
           <TextInput
-            style={styles.passwordInput}
-            placeholder="Elegí una contraseña"
+            style={styles.input}
+            placeholder="Tu nombre (solo letras)"
             placeholderTextColor="#9E9E9E"
-            secureTextEntry={!showPassword}
-            value={password}
-            onChangeText={setPassword}
+            value={nombre}
+            onChangeText={(t) => {
+              setNombre(t);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            editable={!loading}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.showText}>
-              {showPassword ? "Ocultar" : "Mostrar"}
+
+          {/* Campo Apellido */}
+          <Text style={styles.label}>Apellido</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Tu apellido (solo letras)"
+            placeholderTextColor="#9E9E9E"
+            value={apellido}
+            onChangeText={(t) => {
+              setApellido(t);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            editable={!loading}
+          />
+
+          {/* Campo Correo electrónico */}
+          <Text style={styles.label}>Correo electrónico</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="tucorreo@ejemplo.com"
+            placeholderTextColor="#9E9E9E"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={(t) => {
+              setEmail(t);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            editable={!loading}
+          />
+
+          {/* Campo Contraseña */}
+          <Text style={styles.label}>Contraseña</Text>
+          <View style={styles.passwordInputContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Contraseña segura"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              disabled={loading}
+            >
+              <Text style={styles.showText}>
+                {showPassword ? "Ocultar" : "Mostrar"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Indicadores visuales de requisitos de contraseña */}
+          <View style={styles.passwordRequirementsContainer}>
+            <Text style={styles.requirementsTitle}>
+              Requisitos de contraseña:
             </Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.helperText}>Al menos 6 caracteres.</Text>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasMinLength ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasMinLength ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasMinLength && styles.requirementMet,
+                ]}
+              >
+                Mínimo 8 caracteres
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasUppercase ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasUppercase ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasUppercase && styles.requirementMet,
+                ]}
+              >
+                Al menos una letra mayúscula
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasNumber ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasNumber ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasNumber && styles.requirementMet,
+                ]}
+              >
+                Al menos un número
+              </Text>
+            </View>
+            <View style={styles.requirementItem}>
+              <Ionicons
+                name={hasSpecial ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={hasSpecial ? "#2E7D32" : "#888888"}
+              />
+              <Text
+                style={[
+                  styles.requirementText,
+                  hasSpecial && styles.requirementMet,
+                ]}
+              >
+                Al menos un carácter especial (!@#$%^&*)
+              </Text>
+            </View>
+          </View>
 
-        {/* Campo Confirmar contraseña */}
-        <Text style={styles.label}>Confirmar contraseña</Text>
-        <View style={styles.passwordInputContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Repetí la contraseña"
-            placeholderTextColor="#9E9E9E"
-            secureTextEntry={!showConfirmPassword}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
+          {/* Campo Confirmar contraseña */}
+          <Text style={styles.label}>Confirmar contraseña</Text>
+          <View style={styles.passwordInputContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Repetí la contraseña"
+              placeholderTextColor="#9E9E9E"
+              secureTextEntry={!showConfirmPassword}
+              value={confirmPassword}
+              onChangeText={(t) => {
+                setConfirmPassword(t);
+                if (errorMessage) setErrorMessage(null);
+              }}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={loading}
+            >
+              <Text style={styles.showText}>
+                {showConfirmPassword ? "Ocultar" : "Mostrar"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Botón Registrarse */}
           <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.8}
           >
-            <Text style={styles.showText}>
-              {showConfirmPassword ? "Ocultar" : "Mostrar"}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>Registrarse</Text>
+            )}
           </TouchableOpacity>
-        </View>
 
-        {/* Botón Registrarse con evento onPress vinculado */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleRegister}>
-          <Text style={styles.submitButtonText}>Registrarse</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Enlace para ir a Login */}
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>¿Ya tenés una cuenta?</Text>
+            <TouchableOpacity
+              onPress={() => router.replace("/login")}
+              disabled={loading}
+            >
+              <Text style={styles.loginLink}> Iniciar sesión</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#7A2214",
+  },
   container: {
     flex: 1,
-    backgroundColor: "#F5F2EC",
+    backgroundColor: "#F4F0EA",
+  },
+  logo: {
+    width: 30,
+    height: 30,
   },
   header: {
-    backgroundColor: "#8B2613",
+    backgroundColor: "#7A2214",
     paddingHorizontal: 20,
-    paddingTop: 30,
-    paddingBottom: 24,
+    paddingTop: 16,
+    paddingBottom: 22,
     borderBottomLeftRadius: 16,
     borderBottomRightRadius: 16,
   },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "space-between",
+    marginBottom: 12,
   },
   backButton: {
+    padding: 6,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+    borderRadius: 8,
   },
   logoContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
   },
   logoText: {
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
-    marginLeft: 8,
+    marginLeft: 6,
   },
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   headerSubtitle: {
     color: "#E0C8C3",
     fontSize: 14,
+    paddingBottom: 16,
   },
   formContainer: {
     padding: 24,
+    paddingBottom: 40,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorBannerText: {
+    color: "#C62828",
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
   },
   label: {
     fontSize: 14,
@@ -261,27 +461,67 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
   showText: {
-    color: "#8B2613",
+    color: "#7A2214",
     fontWeight: "bold",
     fontSize: 13,
   },
-  helperText: {
-    color: "#777777",
+  passwordRequirementsContainer: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#EAE5DE",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 6,
+    gap: 6,
+  },
+  requirementsTitle: {
     fontSize: 12,
-    marginTop: 4,
-    marginBottom: 4,
+    fontWeight: "700",
+    color: "#555555",
+    marginBottom: 2,
+  },
+  requirementItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  requirementText: {
+    fontSize: 12,
+    color: "#777777",
+  },
+  requirementMet: {
+    color: "#2E7D32",
+    fontWeight: "600",
   },
   submitButton: {
-    backgroundColor: "#8B2613",
+    backgroundColor: "#7A2214",
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 24,
     marginBottom: 20,
   },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
   submitButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  footerContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 6,
+  },
+  footerText: {
+    color: "#555555",
+    fontSize: 14,
+  },
+  loginLink: {
+    color: "#7A2214",
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });
