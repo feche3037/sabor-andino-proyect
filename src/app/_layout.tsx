@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { AuthProvider, useAuth } from "@/context/auth-context";
 import { DataProvider } from "@/context/data-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 // Mantiene el splash nativo visible hasta conocer el estado de autenticación
 SplashScreen.preventAutoHideAsync();
@@ -45,10 +46,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <RootNavigator />
-      </DataProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <DataProvider>
+          <RootNavigator />
+        </DataProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -290,6 +290,7 @@ export function ProductorFormModal({
             <TextInput
               style={styles.modalTextInput}
               placeholder={editando ? undefined : "Ej: Marta Guanuco"}
+              placeholderTextColor="#999999"
               value={nombre}
               onChangeText={setNombre}
               editable={!guardando}
@@ -396,6 +397,7 @@ export function ProductorFormModal({
             <TextInput
               style={styles.modalTextInput}
               placeholder={editando ? undefined : "Ej: Ruta 40 Km 4480"}
+              placeholderTextColor="#999999"
               value={direccion}
               onChangeText={setDireccion}
               editable={!guardando}
@@ -405,6 +407,7 @@ export function ProductorFormModal({
             <TextInput
               style={styles.modalTextInput}
               placeholder="Ej: 387 512-3456 (obligatorio)"
+              placeholderTextColor="#999999"
               keyboardType="phone-pad"
               value={celular}
               onChangeText={setCelular}
@@ -415,6 +418,7 @@ export function ProductorFormModal({
             <TextInput
               style={styles.modalTextInput}
               placeholder={editando ? undefined : "Ej: @martaguanuco_especias"}
+              placeholderTextColor="#999999"
               autoCapitalize={editando ? undefined : "none"}
               value={instagram}
               onChangeText={setInstagram}
@@ -425,6 +429,7 @@ export function ProductorFormModal({
             <TextInput
               style={styles.modalTextInput}
               placeholder={editando ? undefined : "Ej: Marta Guanuco Valles"}
+              placeholderTextColor="#999999"
               value={facebook}
               onChangeText={setFacebook}
               editable={!guardando}

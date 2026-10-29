@@ -256,6 +256,7 @@ export function ProductoFormModal({
             <TextInput
               style={styles.modalTextInput}
               placeholder={editando ? undefined : "Ej: Pimentón de Cachi"}
+              placeholderTextColor="#999999"
               value={nombre}
               onChangeText={setNombre}
               editable={!guardando}
@@ -267,6 +268,7 @@ export function ProductoFormModal({
               placeholder={
                 editando ? undefined : "Ej: Molido fino al vacío 250g"
               }
+              placeholderTextColor="#999999"
               value={presentacion}
               onChangeText={setPresentacion}
               editable={!guardando}
@@ -278,6 +280,7 @@ export function ProductoFormModal({
                 <TextInput
                   style={styles.modalTextInput}
                   placeholder={editando ? undefined : "Ej: L-2026-01"}
+                  placeholderTextColor="#999999"
                   value={lote}
                   onChangeText={setLote}
                   editable={!guardando}
@@ -290,6 +293,7 @@ export function ProductoFormModal({
                 <TextInput
                   style={styles.modalTextInput}
                   placeholder={editando ? undefined : "Ej: 100"}
+                  placeholderTextColor="#999999"
                   keyboardType="numeric"
                   value={stock}
                   onChangeText={setStock}

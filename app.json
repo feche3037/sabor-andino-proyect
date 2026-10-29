@@ -1,18 +1,31 @@
 {
   "expo": {
-    "name": "mac3-team",
-    "slug": "mac3-team",
+    "name": "Sabor Andino",
+    "slug": "sabor-andino",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "mac3team",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "icon": "./assets/images/logo.png",
+    "scheme": "saborandino",
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#7A2214",
+      "translucent": false
+    },
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.saborandino.app",
+      "icon": "./assets/images/logo.png"
     },
     "android": {
+      "package": "com.saborandino.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#7A2214",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -21,16 +34,23 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/logo.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F4F0EA",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#7A2214",
+          "image": "./assets/images/logo.png",
+          "imageWidth": 120
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite seleccionar fotos para los productores y productos."
         }
       ]
     ],
@@ -44,6 +64,6 @@
         "projectId": "0676c434-ce88-4963-8c98-a38ed0be5427"
       }
     },
-    "owner": "mac3-team"
+    "owner": "sabor-andino"
   }
 }

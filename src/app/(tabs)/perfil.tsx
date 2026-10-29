@@ -415,7 +415,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFFFFF",
     letterSpacing: 0.5,
-    padding: "1rem",
   },
   scrollContent: {
     padding: 20,
